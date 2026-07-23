@@ -1,0 +1,60 @@
+{
+  "name": "opencode-session-metrics",
+  "version": "0.1.0",
+  "description": "Token usage and cost tracking for OpenCode sessions",
+  "author": "gerardbalaoro",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gerardbalaoro/opencode-session-metrics.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gerardbalaoro/opencode-session-metrics/issues"
+  },
+  "homepage": "https://github.com/gerardbalaoro/opencode-session-metrics#readme",
+  "keywords": [
+    "opencode",
+    "oc-plugin",
+    "tokens",
+    "cost",
+    "usage"
+  ],
+  "type": "module",
+  "oc-plugin": [
+    "server",
+    "tui"
+  ],
+  "files": [
+    "src/**/*",
+    "tsconfig.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts",
+    "prepublishOnly": "npm run check && npm test",
+    "prepack": "npm run check"
+  },
+  "exports": {
+    ".": "./src/server.ts",
+    "./server": "./src/server.ts",
+    "./tui": "./src/plugin.tsx"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": "^1.18.4",
+    "@opentui/solid": "^0.4.5",
+    "solid-js": "1.9.12"
+  },
+  "engines": {
+    "opencode": ">=1.18.3"
+  }
+}
