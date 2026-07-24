@@ -5,23 +5,15 @@ Includes subagents by usage default.
 
 ## Installation
 
-1. Add the server entry to `opencode.json`:
+1. Add the plugin to `tui.json`:
 
    ```json
    {
-     "plugin": ["opencode-session-metrics/server"]
+     "plugin": ["opencode-session-metrics"]
    }
    ```
 
-2. Add the TUI entry to `tui.json`:
-
-   ```json
-   {
-     "plugin": ["opencode-session-metrics/tui"]
-   }
-   ```
-
-3. Restart OpenCode.
+2. Restart OpenCode.
 
 ## Configuration
 
@@ -30,22 +22,24 @@ The plugin can be customized by modifying its entry in `tui.json`.
 ```jsonc
 {
   "plugin": [
-    "opencode-session-metrics/tui",
-    {
-      // Whether to include token usage from subagents.
-      "include_subagents": true,
+    [
+      "opencode-session-metrics",
+      {
+        // Whether to include token usage from subagents.
+        "include_subagents": true,
 
-      // Configure the plugin's context usage, hidden by default.
-      "context": {
-        "show": true,
-        // Renders the usage text with warning color
-        // when context % usage reaches this value
-        "warn_on_usage": 80,
-        // Renders the usage text with warning color
-        // when tokens in context reaches this value
-        "warn_on_count": 120_000,
+        // Configure the plugin's context usage, hidden by default.
+        "context": {
+          "show": true,
+          // Renders the usage text with warning color
+          // when context % usage reaches this value
+          "warn_on_usage": 80,
+          // Renders the usage text with warning color
+          // when tokens in context reaches this value
+          "warn_on_count": 120_000,
+        },
       },
-    },
+    ],
   ],
   // If `context.show` is true, disable the built-in context panel.
   "plugin_enabled": {

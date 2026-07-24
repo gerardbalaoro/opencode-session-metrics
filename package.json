@@ -1,45 +1,40 @@
 {
   "name": "opencode-session-metrics",
   "version": "0.1.0",
-  "description": "Token usage and cost tracking for OpenCode sessions",
-  "author": "gerardbalaoro",
+  "description": "TUI token usage and cost tracking for OpenCode sessions",
+  "keywords": [
+    "cost",
+    "oc-plugin",
+    "opencode",
+    "tokens",
+    "usage"
+  ],
+  "homepage": "https://github.com/gerardbalaoro/opencode-session-metrics#readme",
+  "bugs": {
+    "url": "https://github.com/gerardbalaoro/opencode-session-metrics/issues"
+  },
   "license": "MIT",
+  "author": "gerardbalaoro",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/gerardbalaoro/opencode-session-metrics.git"
   },
-  "bugs": {
-    "url": "https://github.com/gerardbalaoro/opencode-session-metrics/issues"
-  },
-  "homepage": "https://github.com/gerardbalaoro/opencode-session-metrics#readme",
-  "keywords": [
-    "opencode",
-    "oc-plugin",
-    "tokens",
-    "cost",
-    "usage"
-  ],
-  "type": "module",
-  "oc-plugin": [
-    "server",
-    "tui"
-  ],
   "files": [
     "src/**/*",
     "tsconfig.json",
     "README.md",
     "LICENSE"
   ],
+  "type": "module",
+  "exports": {
+    ".": "./src/plugin.tsx",
+    "./tui": "./src/plugin.tsx"
+  },
   "scripts": {
     "check": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --test test/*.test.ts",
     "prepublishOnly": "npm run check && npm test",
     "prepack": "npm run check"
-  },
-  "exports": {
-    ".": "./src/server.ts",
-    "./server": "./src/server.ts",
-    "./tui": "./src/plugin.tsx"
   },
   "dependencies": {
     "zod": "^4.4.3"
@@ -56,5 +51,8 @@
   },
   "engines": {
     "opencode": ">=1.18.3"
-  }
+  },
+  "oc-plugin": [
+    "tui"
+  ]
 }
