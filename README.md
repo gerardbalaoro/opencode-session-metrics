@@ -3,6 +3,8 @@
 Renders a live session token usage and cost in the TUI sidebar.
 Includes subagents by usage default.
 
+![Plugin Preview](./.github/assets/screenshot.png)
+
 ## Installation
 
 1. Add the plugin to `tui.json`:
