@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import { ConfigSchema } from "./config";
 import { Sidebar } from "./components/sidebar";
