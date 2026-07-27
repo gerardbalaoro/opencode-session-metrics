@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.0...v0.2.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* use OpenTUI JSX runtime for raw TSX ([6a2ddf2](https://github.com/gerardbalaoro/opencode-session-metrics/commit/6a2ddf22f21fea3c7a7173b3da163e090e6b0d20))
+
 ## [0.2.0](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.1.0...v0.2.0) (2026-07-27)
 
 
