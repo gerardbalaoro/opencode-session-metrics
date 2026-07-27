@@ -1,4 +1,3 @@
-/** @jsxImportSource @opentui/solid */
 import { createSignal, onCleanup, Show, type JSX } from "solid-js";
 import type { Metrics } from "../metrics";
 import { formatCost, formatTokens } from "../utils";

@@ -74,18 +74,31 @@ sessions request a high message limit, but server or API limits can cause this.
 
 ## Development
 
-These commands are for maintainers working from a source checkout. From this
-package directory, allow about 2 minutes for validation:
+These commands are for maintainers working from a source checkout. Bun is the
+package manager, build tool, and test runner:
 
 ```sh
-npm install
-npm run check
-npm test
-npm pack --dry-run
+bun install
+bun run check
+bun test
+bun run build
+bun pm pack --dry-run
 ```
 
-Inspect the dry-run contents before publishing. Publishing remains manual:
+Local testing imports the TypeScript source directly, so it does not require a
+build. For example, use this in a local OpenCode configuration:
+
+```json
+{
+  "plugin": ["./plugins/session-metrics/src/plugin.tsx"]
+}
+```
+
+An installed npm package instead uses its compiled `dist/plugin.js` export.
+Inspect the dry-run contents before a release. Release-please automatically
+publishes releases created by the workflow. Use `bun publish` only for manual
+recovery or to reproduce a release:
 
 ```sh
-npm publish
+bun publish --access public
 ```

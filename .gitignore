@@ -1,6 +1,6 @@
 node_modules/
 pnpm-lock.yaml
-bun.lock
+dist/
 .env
 *.log
 *.tgz
