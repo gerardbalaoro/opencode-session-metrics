@@ -11,8 +11,28 @@ import {
   loadContext,
 } from "../src/context.ts";
 import { formatTokens } from "../src/utils.ts";
+import { loadCatalog, normalizeCatalog, openCodeCachePath } from "../src/pricing.ts";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
+import { join } from "node:path";
 
 describe("Metrics", () => {
+  function pricingApi(providers: any[] = [{
+    id: "provider",
+    name: "Provider",
+    models: {
+      model: {
+        cost: { input: 1, output: 2, cache: { read: 3, write: 4 } },
+      },
+    },
+  }]) {
+    return { state: { provider: providers } } as never;
+  }
+
+  function pricedMessage(tokens: Record<string, unknown>, cost?: number) {
+    return { role: "assistant", providerID: "provider", modelID: "model", tokens, ...(cost === undefined ? {} : { cost }) };
+  }
+
   function descendantsApi(
     childrenByParent: Record<string, string[] | undefined>,
     messagesBySession: Record<string, unknown[]> = {},
@@ -127,6 +147,142 @@ describe("Metrics", () => {
       cache_write: 5,
       total: 40,
     });
+  });
+
+  it("estimates zero-cost messages using normalized provider pricing", () => {
+    const metrics = Metrics.fromMessages([
+      pricedMessage({ input: 1_000_000, output: 2_000_000, reasoning: 3_000_000, cache: { read: 4_000_000, write: 5_000_000 } }),
+    ] as never, pricingApi());
+
+    assert.equal(metrics.cost, 0);
+    assert.equal(metrics.estimatedCostByProvider.get("provider")?.cost, 43);
+  });
+
+  it("falls back to the exact OpenCode catalog entry when runtime pricing is zero", () => {
+    const catalog = normalizeCatalog({ provider: { models: { model: {
+      name: "Cached model",
+      cost: { input: 1, output: 2, cache_read: 3, cache_write: 4 },
+    } } } });
+    const api = pricingApi([{ id: "provider", name: "Provider", models: {
+      model: { cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } },
+    } }]);
+    const metrics = Metrics.fromMessages([pricedMessage({ input: 1_000_000 })] as never, api, catalog);
+    assert.equal(metrics.estimatedCostByProvider.get("provider")?.cost, 1);
+  });
+
+  it("keeps runtime pricing when only a runtime context tier is nonzero", () => {
+    const catalog = normalizeCatalog({ provider: { models: { model: {
+      cost: { input: 1, output: 1, cache_read: 1, cache_write: 1 },
+    } } } });
+    const api = pricingApi([{ id: "provider", name: "Provider", models: { model: {
+      cost: {
+        input: 0, output: 0, cache: { read: 0, write: 0 },
+        tiers: [{ input: 5, output: 0, cache: { read: 0, write: 0 }, tier: { type: "context", size: 1 } }],
+      },
+    } } }]);
+    const metrics = Metrics.fromMessages([pricedMessage({ input: 2 })] as never, api, catalog);
+    assert.equal(metrics.estimatedCostByProvider.get("provider")?.cost, 10 / 1_000_000);
+  });
+
+  it("does not use aliases for catalog lookup and prefers nonzero runtime pricing", () => {
+    const catalog = normalizeCatalog({ provider: { models: {
+      model: { name: "Exact", cost: { input: 1, output: 2, cache_read: 3, cache_write: 4 } },
+      alias: { name: "Alias", cost: { input: 100, output: 100, cache_read: 100, cache_write: 100 } },
+    } } });
+    const runtime = pricingApi([{ id: "provider", name: "Provider", models: {
+      model: { cost: { input: 5, output: 0, cache: { read: 0, write: 0 } } },
+    } }]);
+    const metrics = Metrics.fromMessages([pricedMessage({ input: 1_000_000 })] as never, runtime, catalog);
+    assert.equal(metrics.estimatedCostByProvider.get("provider")?.cost, 5);
+    assert.equal(catalog.get("provider/unknown"), undefined);
+  });
+
+  it("normalizes context tiers and safely ignores malformed catalog data", () => {
+    const catalog = normalizeCatalog({ provider: { models: {
+      model: { cost: {
+        input: 1, output: 2, cache_read: 3, cache_write: 4,
+        tiers: [{ input: 5, output: 6, cache_read: 7, cache_write: 8, tier: { type: "context", size: 200_000 } }],
+      } },
+    } } });
+    assert.equal(catalog.get("provider/model")?.cost.tiers?.[0].cache.read, 7);
+    assert.equal(normalizeCatalog(undefined).size, 0);
+  });
+
+  it("gracefully handles missing and malformed cache files", async () => {
+    assert.equal((await loadCatalog("/does/not/exist")).size, 0);
+    const directory = await mkdtemp(join(tmpdir(), "session-metrics-"));
+    try {
+      const path = join(directory, "models.json");
+      await writeFile(path, "not json", "utf8");
+      assert.equal((await loadCatalog(path)).size, 0);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves the OpenCode cache path with set, empty, and unset XDG values", () => {
+    assert.equal(openCodeCachePath({ XDG_CACHE_HOME: "/tmp/custom-cache" }), "/tmp/custom-cache/opencode/models.json");
+    assert.equal(openCodeCachePath({ XDG_CACHE_HOME: "" }), join(homedir(), ".cache", "opencode", "models.json"));
+    assert.equal(openCodeCachePath({}), join(homedir(), ".cache", "opencode", "models.json"));
+  });
+
+  it("does not estimate messages with positive actual cost", () => {
+    const metrics = Metrics.fromMessages([
+      pricedMessage({ input: 1_000_000, output: 1_000_000 }, 2.5),
+    ] as never, pricingApi());
+
+    assert.equal(metrics.cost, 2.5);
+    assert.equal(metrics.estimatedCostByProvider.size, 0);
+  });
+
+  it("keeps input and cache buckets disjoint", () => {
+    const metrics = Metrics.fromMessages([
+      pricedMessage({ input: 1, output: 0, reasoning: 0, cache: { read: 2, write: 3 } }),
+    ] as never, pricingApi());
+
+    assert.equal(metrics.estimatedCostByProvider.get("provider")?.cost, (1 + 2 * 3 + 3 * 4) / 1_000_000);
+  });
+
+  it("aggregates providers and ignores unresolved or zero-rate estimates", () => {
+    const api = pricingApi([
+      { id: "provider", name: "Provider", models: { model: { cost: { input: 1, output: 0, cache: { read: 0, write: 0 } } } } },
+      { id: "zero", name: "Zero", models: { model: { cost: { input: 0, output: 0, cache: { read: 0, write: 0 } } } } },
+    ]);
+    const metrics = Metrics.fromMessages([
+      pricedMessage({ input: 1_000_000, output: 0 }),
+      pricedMessage({ input: 2_000_000, output: 0 }),
+      { ...pricedMessage({ input: 1_000_000 }), providerID: "missing" },
+      { ...pricedMessage({ input: 1_000_000 }), providerID: "zero" },
+    ] as never, api);
+
+    assert.deepEqual([...metrics.estimatedCostByProvider.entries()], [["provider", { name: "Provider", cost: 3 }]]);
+  });
+
+  it("uses the largest tier only when context input is strictly larger", () => {
+    const api = pricingApi([{ id: "provider", name: "Provider", models: { model: {
+      cost: {
+        input: 1, output: 1, cache: { read: 1, write: 1 },
+        tiers: [
+          { input: 2, output: 2, cache: { read: 2, write: 2 }, tier: { type: "context", size: 10 } },
+          { input: 3, output: 3, cache: { read: 3, write: 3 }, tier: { type: "context", size: 20 } },
+        ],
+      },
+    } } }]);
+    const atBoundary = Metrics.fromMessages([pricedMessage({ input: 10, output: 1 })] as never, api);
+    const aboveBoundary = Metrics.fromMessages([pricedMessage({ input: 21, output: 1 })] as never, api);
+
+    assert.equal(atBoundary.estimatedCostByProvider.get("provider")?.cost, 11 / 1_000_000);
+    assert.equal(aboveBoundary.estimatedCostByProvider.get("provider")?.cost, 66 / 1_000_000);
+  });
+
+  it("merges estimated provider costs through descendants", async () => {
+    const api = descendantsApi({ root: ["child"] }, {
+      child: [pricedMessage({ input: 1_000_000 })],
+    }) as never;
+    (api as any).state = (pricingApi() as any).state;
+    const metrics = await Metrics.fromSessionDescendants(api, "root");
+
+    assert.equal(metrics.estimatedCostByProvider.get("provider")?.cost, 1);
   });
 
   it("selects the latest assistant with output tokens", () => {

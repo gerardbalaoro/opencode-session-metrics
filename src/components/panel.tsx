@@ -10,7 +10,8 @@ export function Panel(props: {
   before?: JSX.Element;
   after?: JSX.Element;
 }) {
-  const [expanded, setExpanded] = createSignal(false);
+  const [tokensExpanded, setTokensExpanded] = createSignal(false);
+  const [spendExpanded, setSpendExpanded] = createSignal(false);
   const muted = () => props.theme().textMuted;
 
   return (
@@ -20,16 +21,16 @@ export function Panel(props: {
       </text>
       {props.before}
       <Show when={!props.loading} fallback={<LoadingIndicator theme={props.theme} />}>
-        <box onMouseDown={() => setExpanded((v) => !v)}>
+        <box onMouseDown={() => setTokensExpanded((v) => !v)}>
           <text>
             <span style={{ fg: muted() }}>{formatTokens(props.metrics.tokens.total)}</span>
             <span style={{ fg: muted() }}> tokens</span>
             <Show when={props.metrics.tokens.total > 0}>
-              <span style={{ fg: props.theme().text }}>{expanded() ? " ▾" : " ▸"}</span>
+              <span style={{ fg: props.theme().text }}>{tokensExpanded() ? " ▾" : " ▸"}</span>
             </Show>
           </text>
         </box>
-        <Show when={props.metrics.tokens.total > 0 && expanded()}>
+        <Show when={props.metrics.tokens.total > 0 && tokensExpanded()}>
           <box>
             <BreakdownLine value={props.metrics.tokens.input} label="input" muted={muted()} />
             <BreakdownLine value={props.metrics.tokens.output} label="output" muted={muted()} />
@@ -50,10 +51,39 @@ export function Panel(props: {
             />
           </box>
         </Show>
-        <text>
-          <span style={{ fg: muted() }}>{formatCost(props.metrics.cost)}</span>
-          <span style={{ fg: muted() }}> spent</span>
-        </text>
+        <box
+          onMouseDown={() =>
+            props.metrics.estimatedCostByProvider.size && setSpendExpanded((v) => !v)
+          }
+        >
+          <text>
+            <span style={{ fg: muted() }}>
+              {formatCost(
+                props.metrics.cost +
+                  [...props.metrics.estimatedCostByProvider.values()].reduce(
+                    (total, estimate) => total + estimate.cost,
+                    0,
+                  ),
+              )}
+            </span>
+            <span style={{ fg: muted() }}> spent</span>
+            <Show when={props.metrics.estimatedCostByProvider.size > 0}>
+              <span style={{ fg: props.theme().text }}>{spendExpanded() ? " ▾" : " ▸"}</span>
+            </Show>
+          </text>
+        </box>
+        <Show when={props.metrics.estimatedCostByProvider.size > 0 && spendExpanded()}>
+          <box>
+            {[...props.metrics.estimatedCostByProvider.values()]
+              .sort((a, b) => b.cost - a.cost)
+              .map((estimate) => (
+                <text>
+                  <span style={{ fg: muted() }}> {formatCost(estimate.cost)}</span>
+                  <span style={{ fg: muted() }}> {estimate.name}</span>
+                </text>
+              ))}
+          </box>
+        </Show>
       </Show>
       {props.after}
     </box>

@@ -62,8 +62,11 @@ rollups. Its data source preference is:
 It reports total tokens, input, output, reasoning, cache read/write tokens, and
 cost. If OpenCode omits total, Session Metrics computes it as input + output +
 reasoning; cache tokens remain separate. Values come from OpenCode and provider
-integrations. Session Metrics does not estimate missing provider prices, change
-messages, or persist credentials.
+integrations. When runtime pricing is missing or entirely zero, Session Metrics
+estimates costs using an exact `providerID/modelID` match in OpenCode's local
+`models.json` cache. Runtime pricing takes precedence when any base or
+context-tier rate is nonzero. The cache fallback never fetches network data,
+changes messages, or reads or persists credentials.
 
 Fallback occurs when a request fails or returns no messages. A non-empty HTTP
 response that is silently truncated can still produce incomplete totals. Long

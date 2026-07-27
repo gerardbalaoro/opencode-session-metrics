@@ -6,8 +6,9 @@ import type { ContextUsage } from "../context";
 import { Metrics } from "../metrics";
 import { formatTokens } from "../utils";
 import { Panel } from "./panel";
+import type { Catalog } from "../pricing";
 
-export function Sidebar(props: { api: TuiPluginApi; config: Config; session_id: string }) {
+export function Sidebar(props: { api: TuiPluginApi; config: Config; session_id: string; catalog?: Catalog }) {
   const theme = () => props.api.theme.current;
   const cfg = () => props.config;
 
@@ -24,7 +25,7 @@ export function Sidebar(props: { api: TuiPluginApi; config: Config; session_id: 
         const messages = props.api.state.session.messages(sessionId);
         const localMetrics =
           messages.length > 0
-            ? Metrics.fromMessages(messages)
+            ? Metrics.fromMessages(messages, props.api, props.catalog)
             : session
               ? Metrics.fromSessionRollup(session)
               : undefined;
@@ -64,10 +65,10 @@ export function Sidebar(props: { api: TuiPluginApi; config: Config; session_id: 
               (async () => {
                 const session = props.api.state.session.get(sessionId);
                 if (!session) return new Metrics();
-                return Metrics.fromSessionMessages(props.api, session);
+                return Metrics.fromSessionMessages(props.api, session, props.catalog);
               })(),
               includeSubagents
-                ? Metrics.fromSessionDescendants(props.api, sessionId)
+                 ? Metrics.fromSessionDescendants(props.api, sessionId, props.catalog)
                 : Promise.resolve(new Metrics()),
             ]);
 
