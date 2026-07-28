@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.1...v0.2.2) (2026-07-28)
+
+
+### Bug Fixes
+
+* migrate package build and publishing to Bun ([e0ae0cd](https://github.com/gerardbalaoro/opencode-session-metrics/commit/e0ae0cdfdb2638afb26cba3e6175f6e5ae903de9))
+
 ## [0.2.1](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.0...v0.2.1) (2026-07-27)
 
 
