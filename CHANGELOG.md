@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.2...v0.2.3) (2026-07-28)
+
+
+### Bug Fixes
+
+* support OpenCode 1.17 through 1.18 ([af520c5](https://github.com/gerardbalaoro/opencode-session-metrics/commit/af520c5ced450dffe1f9cfaf77361eb576617a71))
+
 ## [0.2.2](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.1...v0.2.2) (2026-07-28)
 
 
