@@ -13,7 +13,7 @@
         "typescript": "^5.9.3",
       },
       "peerDependencies": {
-        "@opencode-ai/plugin": "^1.18.4",
+        "@opencode-ai/plugin": ">=1.17.0 <1.19.0",
         "@opentui/solid": "^0.4.5",
         "solid-js": "1.9.12",
       },

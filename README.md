@@ -5,6 +5,10 @@ Includes subagents by usage default.
 
 ![Plugin Preview](./.github/assets/screenshot.png)
 
+## Requirements
+
+OpenCode `1.17.x–1.18.x` (`>=1.17.0 <1.19.0`).
+
 ## Installation
 
 1. Add the plugin to `tui.json`:
