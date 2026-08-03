@@ -56,25 +56,19 @@ The plugin can be customized by modifying its entry in `tui.json`.
 
 ## How It Works
 
-Session Metrics reads assistant messages that contain token data and session
-rollups. Its data source preference is:
-
-1. HTTP messages
-2. Loaded TUI messages
-3. Session aggregates
-
-It reports total tokens, input, output, reasoning, cache read/write tokens, and
-cost. If OpenCode omits total, Session Metrics computes it as input + output +
-reasoning; cache tokens remain separate. Values come from OpenCode and provider
-integrations. When runtime pricing is missing or entirely zero, Session Metrics
-estimates costs using an exact `providerID/modelID` match in OpenCode's local
-`models.json` cache. Runtime pricing takes precedence when any base or
-context-tier rate is nonzero. The cache fallback never fetches network data,
-changes messages, or reads or persists credentials.
-
-Fallback occurs when a request fails or returns no messages. A non-empty HTTP
-response that is silently truncated can still produce incomplete totals. Long
-sessions request a high message limit, but server or API limits can cause this.
+- **Sources:** Prefers HTTP assistant messages, then loaded TUI messages, then
+  session rollups. Subagents are included by default and can be controlled with
+  `include_subagents`.
+- **Metrics:** Reports total, input, output, reasoning, cache read/write tokens,
+  and cost. If total is missing, it is derived as input + output + reasoning;
+  cache tokens remain separate.
+- **Cost:** Uses reported message cost; a zero cost is estimated from an exact
+  `providerID/modelID` pricing match, preferring runtime pricing over local
+  `models.json`.
+- **Privacy:** The local fallback makes no network calls, touches no
+  credentials, and does not alter messages.
+- **Limitations:** Failed or empty requests fall back to the next source. A
+  non-empty HTTP response that is silently truncated can still undercount.
 
 ## Development
 

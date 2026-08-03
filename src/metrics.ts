@@ -1,6 +1,12 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
-import { getSessionDescendants, type Message, type Session } from "./session";
-import { hasPricing, type Catalog, type Pricing } from "./pricing";
+import { abortable, hasResponseError, isAbortError, mapWithConcurrency } from "./utils";
+import {
+  DESCENDANT_CONCURRENCY,
+  getSessionDescendants,
+  type Message,
+  type Session,
+} from "./session";
+import { getPricingResolver, type Catalog, type PricingResolver } from "./pricing";
 
 export type SessionRollup = Omit<Session, "cost" | "tokens"> & {
   cost?: number;
@@ -11,6 +17,21 @@ export type SessionRollup = Omit<Session, "cost" | "tokens"> & {
     reasoning?: number;
     cache?: { read?: number; write?: number };
   };
+};
+
+export type SessionMetricsSource = "http" | "tui" | "rollup" | "empty";
+
+export type SessionMetricsLoadResult = {
+  metrics: Metrics;
+  source: SessionMetricsSource;
+  messages?: ReadonlyArray<Message>;
+  successful: boolean;
+};
+
+type SessionMetricsLoadOptions = {
+  catalog?: Catalog;
+  resolver?: PricingResolver;
+  signal?: AbortSignal;
 };
 
 type SessionWithRollup = SessionRollup &
@@ -45,8 +66,14 @@ export class Metrics {
     total: 0,
   };
 
-  static fromMessages(messages: ReadonlyArray<Message>, api?: TuiPluginApi, catalog?: Catalog) {
+  static fromMessages(
+    messages: ReadonlyArray<Message>,
+    api?: TuiPluginApi,
+    catalog?: Catalog,
+    resolver?: PricingResolver,
+  ) {
     const metrics = new Metrics();
+    const pricingResolver = api ? (resolver ?? getPricingResolver(api, catalog)) : undefined;
 
     for (const message of messages) {
       if (message.role !== "assistant" || !message.tokens) {
@@ -56,18 +83,18 @@ export class Metrics {
       const { input, output, reasoning } = message.tokens;
       const cache = message.tokens.cache;
 
-       const messageCost = message.cost ?? 0;
-       metrics.cost += messageCost;
-       if (api && messageCost === 0) {
-          const estimate = estimateMessageCost(api, message, catalog);
-         if (estimate) {
-           const current = metrics.estimatedCostByProvider.get(estimate.id);
-           metrics.estimatedCostByProvider.set(estimate.id, {
-             name: estimate.name,
-             cost: (current?.cost ?? 0) + estimate.cost,
-           });
-         }
-       }
+      const messageCost = message.cost ?? 0;
+      metrics.cost += messageCost;
+      if (api && messageCost === 0) {
+        const estimate = estimateMessageCost(api, message, catalog, pricingResolver);
+        if (estimate) {
+          const current = metrics.estimatedCostByProvider.get(estimate.id);
+          metrics.estimatedCostByProvider.set(estimate.id, {
+            name: estimate.name,
+            cost: (current?.cost ?? 0) + estimate.cost,
+          });
+        }
+      }
       metrics.tokens.input += input;
       metrics.tokens.output += output;
       metrics.tokens.reasoning += reasoning;
@@ -119,41 +146,48 @@ export class Metrics {
     return data ? (Metrics.fromSessionRollup(data) ?? new Metrics()) : new Metrics();
   }
 
-  static async fromSessionMessages(api: TuiPluginApi, session: Session, catalog?: Catalog) {
-    // Prefer complete HTTP messages so totals are authoritative even when the
-    // local TUI state is windowed or incomplete. Use a high explicit limit to
-    // avoid the server default truncating long sessions.
-    try {
-      const response = await api.client.session.messages({
-        sessionID: session.id,
-        limit: 100_000,
-      });
-      const rows = (response.data ?? []) as Array<{ info?: unknown }>;
-      const messages = rows.map((row) => row.info).filter((info): info is Message => !!info);
-
-      if (messages.length > 0) {
-        return Metrics.fromMessages(messages, api, catalog);
-      }
-    } catch {
-      // Ignore HTTP errors and fall back to the next source.
-    }
-
-    // Fall back to live TUI message state when the session is already loaded.
-    const stateMessages = api.state.session.messages(session.id);
-    if (stateMessages.length > 0) {
-      return Metrics.fromMessages(stateMessages, api, catalog);
-    }
-
-    // Fall back to session aggregate data.
-    return await Metrics.fromSession(api, session);
+  clone() {
+    const metrics = new Metrics();
+    metrics.cost = this.cost;
+    metrics.tokens = { ...this.tokens };
+    metrics.estimatedCostByProvider = new Map(
+      [...this.estimatedCostByProvider.entries()].map(([id, estimate]) => [id, { ...estimate }]),
+    );
+    return metrics;
   }
 
-  static async fromSessionDescendants(api: TuiPluginApi, rootSessionId: string, catalog?: Catalog): Promise<Metrics> {
+  static async fromSessionMessages(
+    api: TuiPluginApi,
+    session: Session,
+    options: SessionMetricsLoadOptions = {},
+  ) {
+    const result = await loadSessionMetrics(api, session.id, options);
+    if (!result.successful) throw new Error("Session metrics unavailable");
+    return result.messages
+      ? Metrics.fromMessages(result.messages, api, options.catalog, options.resolver)
+      : result.metrics.clone();
+  }
+
+  static async fromSessionDescendants(
+    api: TuiPluginApi,
+    rootSessionId: string,
+    options: SessionMetricsLoadOptions = {},
+  ): Promise<Metrics> {
     const totals = new Metrics();
 
-    for (const descendant of await getSessionDescendants(api, rootSessionId)) {
-      totals.add(await Metrics.fromSessionMessages(api, descendant, catalog));
-    }
+    const descendants = await getSessionDescendants(api, rootSessionId, { signal: options.signal });
+    const descendantMetrics = await mapWithConcurrency(
+      descendants,
+      DESCENDANT_CONCURRENCY,
+      (descendant) =>
+        Metrics.fromSessionMessages(api, descendant, options).catch((error) => {
+          if (isAbortError(error)) throw error;
+          options.signal?.throwIfAborted();
+          return new Metrics();
+        }),
+      options.signal,
+    );
+    for (const metrics of descendantMetrics) totals.add(metrics);
 
     return totals;
   }
@@ -188,18 +222,119 @@ export class Metrics {
   }
 }
 
-export function estimateMessageCost(api: TuiPluginApi, message: Message, catalog?: Catalog) {
+function messageLoadResult(
+  source: "http" | "tui",
+  messages: ReadonlyArray<Message>,
+  api: TuiPluginApi,
+  catalog: Catalog | undefined,
+  resolver: PricingResolver,
+): SessionMetricsLoadResult {
+  let metrics: Metrics | undefined;
+  return {
+    get metrics() {
+      return (metrics ??= Metrics.fromMessages(messages, api, catalog, resolver));
+    },
+    source,
+    messages,
+    successful: true,
+  };
+}
+
+/** Load one session while preserving the HTTP → TUI → rollup fallback order. */
+export async function loadSessionMetrics(
+  api: TuiPluginApi,
+  sessionID: string,
+  options: SessionMetricsLoadOptions = {},
+): Promise<SessionMetricsLoadResult> {
+  const { catalog, resolver, signal } = options;
+  signal?.throwIfAborted();
+  const pricingResolver = resolver ?? getPricingResolver(api, catalog);
+  let emptyHttpResult: SessionMetricsLoadResult | undefined;
+
+  try {
+    const response = await abortable<any>(
+      (api.client.session.messages as any)(
+        { sessionID, limit: 100_000 },
+        signal ? { signal } : undefined,
+      ),
+      signal,
+    );
+    signal?.throwIfAborted();
+    if (hasResponseError(response)) throw new Error("Session messages request failed");
+    if (!Array.isArray(response?.data)) throw new Error("Session messages response unavailable");
+    const rows = response.data as Array<{ info?: unknown }>;
+    const messages = rows.map((row) => row.info).filter((info): info is Message => !!info);
+
+    const result = messageLoadResult("http", messages, api, catalog, pricingResolver);
+    if (messages.length > 0) return result;
+    emptyHttpResult = result;
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    signal?.throwIfAborted();
+  }
+
+  signal?.throwIfAborted();
+
+  let stateMessages: ReadonlyArray<Message> = [];
+  try {
+    stateMessages = api.state.session.messages(sessionID);
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    signal?.throwIfAborted();
+  }
+  signal?.throwIfAborted();
+  if (stateMessages.length > 0) {
+    return messageLoadResult("tui", stateMessages, api, catalog, pricingResolver);
+  }
+
+  let session: Session | undefined;
+  try {
+    session = api.state.session.get?.(sessionID);
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    signal?.throwIfAborted();
+  }
+  signal?.throwIfAborted();
+  const localMetrics = session ? Metrics.fromSessionRollup(session) : undefined;
+  if (localMetrics) return { metrics: localMetrics, source: "rollup", successful: true };
+
+  try {
+    const response = await abortable<any>(
+      (api.client.session.get as any)({ sessionID }, signal ? { signal } : undefined),
+      signal,
+    );
+    signal?.throwIfAborted();
+    if (hasResponseError(response)) throw new Error("Session request failed");
+    const httpMetrics = response?.data ? Metrics.fromSessionRollup(response.data) : undefined;
+    if (httpMetrics) return { metrics: httpMetrics, source: "rollup", successful: true };
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    signal?.throwIfAborted();
+  }
+
+  signal?.throwIfAborted();
+  if (emptyHttpResult) return emptyHttpResult;
+  return { metrics: new Metrics(), source: "empty", successful: false };
+}
+
+export function estimateMessageCost(
+  api: TuiPluginApi,
+  message: Message,
+  catalog?: Catalog,
+  resolver?: PricingResolver,
+) {
   if (message.role !== "assistant" || !message.tokens) return undefined;
 
   const candidate = message as Message & { providerID?: string; modelID?: string };
   if (!candidate.providerID || !candidate.modelID) return undefined;
 
-  const provider = api.state.provider.find((item) => item.id === candidate.providerID);
-  const model = provider?.models[candidate.modelID];
-  const runtimeCost = model?.cost as Pricing | undefined;
-  const cached = catalog?.get(`${candidate.providerID}/${candidate.modelID}`);
-  const baseRates = runtimeCost && hasPricing(runtimeCost) ? runtimeCost : cached?.cost;
-  if (!provider || !baseRates || !hasPricing(baseRates)) return undefined;
+  const resolution = (resolver ?? getPricingResolver(api, catalog)).resolve(
+    api,
+    candidate.providerID,
+    candidate.modelID,
+    catalog,
+  );
+  if (!resolution?.cost) return undefined;
 
   const input = message.tokens.input ?? 0;
   const output = message.tokens.output ?? 0;
@@ -207,10 +342,10 @@ export function estimateMessageCost(api: TuiPluginApi, message: Message, catalog
   const cacheRead = message.tokens.cache?.read ?? 0;
   const cacheWrite = message.tokens.cache?.write ?? 0;
   const contextInput = input + cacheRead + cacheWrite;
-  const tier = baseRates.tiers
-    ?.filter((item) => item.tier.type === "context" && contextInput > item.tier.size)
-    .sort((a, b) => b.tier.size - a.tier.size)[0];
-  const rates = tier ?? baseRates;
+  const tier = resolution.cost.tiers?.find(
+    (item) => item.tier.type === "context" && contextInput > item.tier.size,
+  );
+  const rates = tier ?? resolution.cost;
   const cost =
     (input * rates.input +
       output * rates.output +
@@ -220,5 +355,9 @@ export function estimateMessageCost(api: TuiPluginApi, message: Message, catalog
     1_000_000;
 
   if (!(cost > 0)) return undefined;
-  return { id: provider.id, name: provider.name || cached?.name || provider.id, cost };
+  return {
+    id: resolution.provider.id,
+    name: resolution.provider.name || resolution.catalog?.name || resolution.provider.id,
+    cost,
+  };
 }
