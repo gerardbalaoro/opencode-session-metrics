@@ -1,0 +1,10 @@
+pre-commit:
+  piped: true
+  jobs:
+    - name: format
+      glob: "{*.{js,jsx,ts,tsx,json,jsonc,md,mdx,yml,yaml},**/*.{js,jsx,ts,tsx,json,jsonc,md,mdx,yml,yaml}}"
+      run: bunx --no-install oxfmt --write {staged_files}
+      stage_fixed: true
+    - name: lint
+      glob: "{*.{ts,tsx,mts,cts},**/*.{ts,tsx,mts,cts}}"
+      run: bunx --no-install oxlint {staged_files}
