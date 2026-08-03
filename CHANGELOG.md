@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.3...v0.3.0) (2026-08-03)
+
+
+### Features
+
+* add incremental caching and event-driven refresh ([f047818](https://github.com/gerardbalaoro/opencode-session-metrics/commit/f047818efd25f2f6688511a0e1cfab664d75084f))
+
 ## [0.2.3](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.2...v0.2.3) (2026-07-28)
 
 

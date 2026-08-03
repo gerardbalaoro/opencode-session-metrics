@@ -1,6 +1,6 @@
 {
   "name": "opencode-session-metrics",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "TUI token usage and cost tracking for OpenCode sessions",
   "keywords": [
     "cost",
