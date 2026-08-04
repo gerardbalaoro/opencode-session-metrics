@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.3.0...v0.3.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* broaden @opentui/solid peer range ([f1f892f](https://github.com/gerardbalaoro/opencode-session-metrics/commit/f1f892f9e8d634e0370d8371e065785c8ee066c2))
+
 ## [0.3.0](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.3...v0.3.0) (2026-08-03)
 
 
