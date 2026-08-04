@@ -58,7 +58,7 @@
   },
   "peerDependencies": {
     "@opencode-ai/plugin": ">=1.17.0 <1.19.0",
-    "@opentui/solid": "^0.4.5",
+    "@opentui/solid": ">=0.4.3 <=0.5.1",
     "solid-js": "1.9.12"
   },
   "engines": {
