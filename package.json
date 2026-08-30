@@ -29,7 +29,10 @@
     "#lib/api": "./src/lib/api.ts",
     "#lib/context": "./src/lib/context.ts",
     "#lib/message-snapshot": "./src/lib/message-snapshot.ts",
+    "#lib/metrics-loader": "./src/lib/metrics-loader.ts",
+    "#lib/metrics": "./src/lib/metrics.ts",
     "#lib/model-key": "./src/lib/model-key.ts",
+    "#lib/pricing": "./src/lib/pricing.ts",
     "#lib/session": "./src/lib/session.ts",
     "#lib/utils": "./src/lib/utils.ts"
   },
