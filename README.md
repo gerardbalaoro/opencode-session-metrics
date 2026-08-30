@@ -5,10 +5,6 @@ Includes subagents by usage default.
 
 ![Plugin Preview](./.github/assets/screenshot.png)
 
-## Requirements
-
-OpenCode `1.17.x–1.18.x` (`>=1.17.0 <1.19.0`).
-
 ## Installation
 
 1. Add the plugin to `tui.json`:
@@ -44,15 +40,28 @@ The plugin can be customized by modifying its entry in `tui.json`.
           // when tokens in context reaches this value
           "warn_on_count": 120_000,
         },
+
+        // Whether to show model usage in the session sidebar (shown by default).
+        "models": {
+          "show": true,
+        },
       },
     ],
   ],
-  // If `context.show` is true, disable the built-in context panel.
-  "plugin_enabled": {
-    "internal:sidebar-context": false,
-  },
 }
 ```
+
+The sidebar's Session section is always available. Context usage is hidden by
+default; setting `context.show` replaces OpenCode's built-in context section
+automatically. Model usage is shown by default and is grouped by provider and
+model; set `models.show` to hide it.
+
+The `/metrics` TUI command opens a dialog with Context, Session, and Models
+sections regardless of the sidebar visibility settings. It shows the current
+session's provider and model breakdown, including token counts, speed, and
+cost. In OpenCode 1.18, select `metrics` from slash autocomplete; typing
+`/metrics` and pressing Enter may use the server-command path instead of the
+TUI command.
 
 ## How It Works
 

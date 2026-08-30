@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const ConfigContextSchema = z
+export const ConfigContextSchema = z
   .object({
     show: z
       .boolean()
@@ -23,6 +23,16 @@ const ConfigContextSchema = z
   })
   .strict();
 
+export const ConfigModelsSchema = z
+  .object({
+    show: z
+      .boolean()
+      .optional()
+      .default(true)
+      .describe("Whether to show model usage in the session sidebar."),
+  })
+  .strict();
+
 export const ConfigSchema = z
   .object({
     include_subagents: z
@@ -35,6 +45,9 @@ export const ConfigSchema = z
       .describe(
         "Configure the context section in the session sidebar. Use to replace the built-in context section.",
       ),
+    models: ConfigModelsSchema.optional()
+      .default(ConfigModelsSchema.parse({}))
+      .describe("Configure the models section in the session sidebar."),
   })
   .strict();
 

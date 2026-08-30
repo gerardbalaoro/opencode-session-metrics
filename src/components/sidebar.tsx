@@ -1,132 +1,110 @@
-import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
-import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
-import type { Config } from "../config";
-import { isContextCountWarning, isContextWarning, loadContext } from "../context";
-import type { ContextUsage } from "../context";
-import { SessionMetricsStore } from "../metrics-store";
-import { RefreshScheduler } from "../refresh";
-import { formatTokens } from "../utils";
-import { Panel } from "./panel";
-import type { Catalog } from "../pricing";
+/** @jsxImportSource @opentui/solid */
+import { createMemo, Show, type Accessor } from "solid-js";
 
-export function shouldShowLoading(includeSubagents: boolean, hasUsableSnapshot: boolean) {
-  return includeSubagents && !hasUsableSnapshot;
-}
+import type { Config } from "#config";
+import type { MetricsProviderApi } from "#lib/api";
+import type { ModelUsage } from "#lib/metrics";
+import type { MetricsStore } from "#lib/metrics-store";
+import type { Catalog } from "#lib/pricing";
 
-export function Sidebar(props: {
-  api: TuiPluginApi;
-  config: Config;
-  session_id: string;
-  catalog?: Catalog;
-  store?: SessionMetricsStore;
-}) {
-  const theme = () => props.api.theme.current;
-  const cfg = () => props.config;
-  const store = props.store ?? new SessionMetricsStore(props.api, { catalog: props.catalog });
-  if (!props.store) onCleanup(() => store.dispose());
+import { formatCost, formatNumber } from "#lib/utils";
 
-  const [sessionMetrics, setSessionMetrics] = createSignal(store.get(props.session_id));
-  const [loading, setLoading] = createSignal(true);
-  const [context, setContext] = createSignal<ContextUsage>();
+import { Collapsible, Loader } from "./common";
+import { MetricsProvider, useMetrics } from "./metrics-provider";
+import { ModelBreakdown, ModelList } from "./models";
+import { ModelsProvider, useModels } from "./models-provider";
+import { ThemeProvider } from "./theme-provider";
+import { TokenSpend, TokenBreakdown, Context } from "./usage";
 
-  createEffect(
-    on(
-      () => [props.session_id, cfg().include_subagents, props.catalog] as const,
-      ([sessionId, includeSubagents, catalog]) => {
-        const release = store.retain(sessionId);
-        store.setIncludeSubagents(includeSubagents);
-        if (catalog) store.setCatalog(catalog);
-        setSessionMetrics(store.prime(sessionId));
-        let hasUsableSnapshot = store.hasUsableSnapshot(sessionId);
-        setContext(undefined);
-        setLoading(shouldShowLoading(includeSubagents, hasUsableSnapshot));
-
-        const unsubscribe = store.subscribe(sessionId, () => {
-          if (sessionId === props.session_id) {
-            hasUsableSnapshot ||= store.hasUsableSnapshot(sessionId);
-            setSessionMetrics(store.get(sessionId));
-          }
-        });
-        const scheduler = new RefreshScheduler({
-          api: props.api,
-          store,
-          sessionID: sessionId,
-          includeSubagents,
-          onRefresh: async (signal) => {
-            hasUsableSnapshot ||= store.hasUsableSnapshot(sessionId);
-            setLoading(shouldShowLoading(includeSubagents, hasUsableSnapshot));
-            await store.refresh(sessionId, { signal });
-            if (!signal.aborted && sessionId === props.session_id) {
-              setSessionMetrics(store.get(sessionId));
-              hasUsableSnapshot ||= store.hasUsableSnapshot(sessionId);
-              setLoading(shouldShowLoading(includeSubagents, hasUsableSnapshot));
-            }
-            return !store.isDirty(sessionId);
-          },
-        });
-        scheduler.start();
-
-        onCleanup(() => {
-          scheduler.dispose();
-          unsubscribe();
-          release();
-        });
-      },
-    ),
-  );
-
-  createEffect(() => {
-    if (!cfg().context.show) {
-      setContext(undefined);
-      return;
-    }
-    setContext(loadContext(props.api, props.session_id));
+function UsageModel(props: { usage: Accessor<ModelUsage> }) {
+  const { getModelName } = useModels();
+  const name = createMemo(() => {
+    const usage = props.usage();
+    return getModelName(usage.providerID, usage.modelID);
   });
 
   return (
+    <Collapsible title={name} level={2} children={() => <ModelBreakdown usage={props.usage} />} />
+  );
+}
+
+function UsageTokens(props: { config: Config }) {
+  const { metrics, loading, context } = useMetrics();
+
+  return (
+    <>
+      <Show when={props.config.context.show}>
+        <Context usage={context} config={props.config.context} />
+      </Show>
+      <Show when={!loading()} fallback={<Loader />}>
+        <Collapsible
+          title={() => `${formatNumber(metrics().tokens.total)} tokens`}
+          level={3}
+          children={() => <TokenBreakdown metrics={metrics} />}
+        />
+        <Collapsible
+          title={() => `${formatCost(metrics().totalCost)} spent`}
+          level={3}
+          children={() => <TokenSpend metrics={metrics} />}
+        />
+      </Show>
+    </>
+  );
+}
+
+function SidebarContent(props: { config: Config }) {
+  const { metrics, loading } = useMetrics();
+
+  return (
     <box gap={1}>
-      <Panel
-        metrics={sessionMetrics()}
-        theme={theme}
-        loading={loading()}
-        before={context() && <ContextLine usage={context()} config={cfg().context} theme={theme} />}
+      <Collapsible
+        title={() => "Session"}
+        open={true}
+        indent={0}
+        children={() => <UsageTokens config={props.config} />}
       />
+      <Show when={props.config.models.show && metrics().models.size > 0}>
+        <Collapsible
+          title={() => "Models"}
+          indent={0}
+          children={() => (
+            <ModelList
+              metrics={metrics}
+              loading={loading()}
+              renderModel={(usage) => <UsageModel usage={usage} />}
+            />
+          )}
+        />
+      </Show>
     </box>
   );
 }
 
-function ContextLine(props: {
-  usage?: ContextUsage;
-  config: Config["context"];
-  theme: () => { textMuted: unknown; warning: unknown };
+export function Sidebar(props: {
+  api: MetricsProviderApi;
+  config: Config;
+  session_id: string;
+  catalog?: Catalog;
+  store?: MetricsStore;
 }) {
-  const usage = () => props.usage;
-
   return (
-    <Show when={usage()}>
-      <text>
-        <span
-          style={{
-            fg: isContextCountWarning(usage()!.tokens, props.config.warn_on_count)
-              ? props.theme().warning
-              : props.theme().textMuted,
-          }}
-        >
-          {formatTokens(usage()!.tokens)} context
-        </span>
-        <Show when={usage()!.percentage !== undefined}>
-          <span style={{ fg: props.theme().textMuted }}> • </span>
-          <span
-            style={{
-              fg: isContextWarning(usage()!.percentage!, props.config.warn_on_usage)
-                ? props.theme().warning
-                : props.theme().textMuted,
-            }}
-          >
-            {usage()!.percentage}% used
-          </span>
-        </Show>
-      </text>
-    </Show>
+    <MetricsProvider
+      api={props.api}
+      sessionID={props.session_id}
+      includeSubagents={props.config.include_subagents}
+      store={props.store}
+      catalog={props.catalog}
+      children={() => (
+        <ThemeProvider
+          value={() => props.api.theme.current}
+          children={() => (
+            <ModelsProvider
+              value={() => props.api.state.provider}
+              children={() => <SidebarContent config={props.config} />}
+            />
+          )}
+        />
+      )}
+    />
   );
 }
