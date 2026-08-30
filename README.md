@@ -17,6 +17,10 @@ Includes subagents by usage default.
 
 2. Restart OpenCode.
 
+## Requirements
+
+OpenCode `>=1.18.0 <2.0.0`
+
 ## Configuration
 
 The plugin can be customized by modifying its entry in `tui.json`.
@@ -51,17 +55,10 @@ The plugin can be customized by modifying its entry in `tui.json`.
 }
 ```
 
-The sidebar's Session section is always available. Context usage is hidden by
-default; setting `context.show` replaces OpenCode's built-in context section
-automatically. Model usage is shown by default and is grouped by provider and
-model; set `models.show` to hide it.
-
-The `/metrics` TUI command opens a dialog with Context, Session, and Models
-sections regardless of the sidebar visibility settings. It shows the current
-session's provider and model breakdown, including token counts, speed, and
-cost. In OpenCode 1.18, select `metrics` from slash autocomplete; typing
-`/metrics` and pressing Enter may use the server-command path instead of the
-TUI command.
+The `/metrics` TUI command always shows the Session context and Models sections,
+regardless of `context.show` or `models.show`. In OpenCode 1.18, select
+`metrics` from slash autocomplete; typing `/metrics` and pressing Enter may use
+the server-command path instead of the TUI command.
 
 ## How It Works
 
@@ -106,7 +103,7 @@ build. For example, use this in a local OpenCode configuration:
 }
 ```
 
-An installed npm package instead uses its compiled `dist/plugin.js` export.
+An installed npm package instead uses its compiled `dist/plugin.mjs` export.
 Inspect the dry-run contents before a release. Release-please automatically
 publishes releases created by the workflow. Use `bun publish` only for manual
 recovery or to reproduce a release:
