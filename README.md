@@ -87,10 +87,15 @@ package manager, build tool, and test runner:
 ```sh
 bun install
 bun run check
-bun test
+bun run test
+bun run test:ui
 bun run build
 bun pm pack --dry-run
 ```
+
+`bun run test` uses Bun's `browser` condition so the OpenTUI Solid renderer is
+used and the UI harness runs with the rest of the test suite. `bun run test:ui`
+runs the UI tests directly.
 
 Local testing imports the TypeScript source directly, so it does not require a
 build. For example, use this in a local OpenCode configuration:
