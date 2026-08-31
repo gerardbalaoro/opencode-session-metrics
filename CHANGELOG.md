@@ -2,17 +2,15 @@
 
 ## [0.3.1](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.3.0...v0.3.1) (2026-08-04)
 
-
 ### Bug Fixes
 
-* broaden @opentui/solid peer range ([f1f892f](https://github.com/gerardbalaoro/opencode-session-metrics/commit/f1f892f9e8d634e0370d8371e065785c8ee066c2))
+- broaden @opentui/solid peer range ([f1f892f](https://github.com/gerardbalaoro/opencode-session-metrics/commit/f1f892f9e8d634e0370d8371e065785c8ee066c2))
 
 ## [0.3.0](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.3...v0.3.0) (2026-08-03)
 
-
 ### Features
 
-* add incremental caching and event-driven refresh ([f047818](https://github.com/gerardbalaoro/opencode-session-metrics/commit/f047818efd25f2f6688511a0e1cfab664d75084f))
+- add incremental caching and event-driven refresh ([f047818](https://github.com/gerardbalaoro/opencode-session-metrics/commit/f047818efd25f2f6688511a0e1cfab664d75084f))
 
 ## [0.2.3](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.2.2...v0.2.3) (2026-07-28)
 
