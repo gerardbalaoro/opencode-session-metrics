@@ -3,7 +3,7 @@ import type { JSX } from "solid-js";
 
 import { createContext, useContext, type Accessor } from "solid-js";
 
-import type { ProviderState } from "#lib/api";
+import type { ProviderState } from "../lib/api";
 
 export type Providers = ProviderState;
 

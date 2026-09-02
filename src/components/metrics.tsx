@@ -3,8 +3,7 @@ import type { createTextAttributes, StyleAttrs } from "@opentui/core";
 
 import { splitProps, type ComponentProps } from "solid-js";
 
-import { formatNumber } from "#lib/utils";
-
+import { formatNumber } from "../lib/utils";
 import { ReactiveFor, type Reactive } from "./common";
 import { useTheme } from "./theme-provider";
 

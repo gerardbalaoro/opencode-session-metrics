@@ -7,6 +7,7 @@
     "jsxImportSource": "@opentui/solid",
     "lib": ["ES2022"],
     "types": ["node", "bun"],
+    "customConditions": ["browser"],
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
@@ -15,6 +16,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "test/**/*.tsx", "scripts/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts", "test/**/*.tsx", "tsdown.config.ts"],
   "exclude": ["node_modules"]
 }

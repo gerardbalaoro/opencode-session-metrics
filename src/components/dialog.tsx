@@ -4,13 +4,12 @@ import type { JSX } from "solid-js";
 import { useTerminalDimensions } from "@opentui/solid";
 import { children, createMemo, type Accessor } from "solid-js";
 
-import type { Config } from "#config";
-import type { MetricsProviderApi } from "#lib/api";
-import type { ModelUsage } from "#lib/metrics";
-import type { MetricsStore } from "#lib/metrics-store";
+import type { Config } from "../config";
+import type { MetricsProviderApi } from "../lib/api";
+import type { ModelUsage } from "../lib/metrics";
+import type { MetricsStore } from "../lib/metrics-store";
 
-import { formatCost, formatNumber } from "#lib/utils";
-
+import { formatCost, formatNumber } from "../lib/utils";
 import { type Reactive } from "./common";
 import { MetricLine, MetricList } from "./metrics";
 import { MetricsProvider, useMetrics } from "./metrics-provider";

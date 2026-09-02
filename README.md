@@ -79,7 +79,7 @@ the server-command path instead of the TUI command.
 ## Development
 
 These commands are for maintainers working from a source checkout. Bun is the
-package manager, build tool, and test runner:
+package manager and script/test runner; tsdown is the build tool:
 
 ```sh
 bun install
@@ -103,7 +103,8 @@ build. For example, use this in a local OpenCode configuration:
 }
 ```
 
-An installed npm package instead uses its compiled `dist/plugin.mjs` export.
+An installed npm package instead uses its compiled `dist/plugin.js` export and
+preserved `dist` source tree.
 Inspect the dry-run contents before a release. Release-please automatically
 publishes releases created by the workflow. Use `bun publish` only for manual
 recovery or to reproduce a release:

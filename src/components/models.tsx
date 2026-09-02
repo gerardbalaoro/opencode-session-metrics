@@ -3,10 +3,9 @@ import type { JSX } from "solid-js";
 
 import { createEffect, createMemo, createSignal, Show, type Accessor } from "solid-js";
 
-import { type Metrics, type ModelUsage } from "#lib/metrics";
-import { modelKey, type ModelKey } from "#lib/model-key";
-import { formatCost, formatNumber, formatPercentage, formatSpeed } from "#lib/utils";
-
+import { type Metrics, type ModelUsage } from "../lib/metrics";
+import { modelKey, type ModelKey } from "../lib/model-key";
+import { formatCost, formatNumber, formatPercentage, formatSpeed } from "../lib/utils";
 import { Loader, ReactiveFor } from "./common";
 import { createNonZeroMetric, MetricList } from "./metrics";
 import { useTheme } from "./theme-provider";

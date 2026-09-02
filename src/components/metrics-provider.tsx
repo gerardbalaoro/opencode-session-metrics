@@ -9,13 +9,13 @@ import {
   type JSX,
 } from "solid-js";
 
-import type { MetricsProviderApi } from "#lib/api";
-import type { ContextUsage } from "#lib/context";
-import type { Metrics } from "#lib/metrics";
-import type { Catalog } from "#lib/pricing";
+import type { MetricsProviderApi } from "../lib/api";
+import type { ContextUsage } from "../lib/context";
+import type { Metrics } from "../lib/metrics";
+import type { Catalog } from "../lib/pricing";
 
-import { loadContext } from "#lib/context";
-import { SessionMetricsStore, type MetricsStore } from "#lib/metrics-store";
+import { loadContext } from "../lib/context";
+import { SessionMetricsStore, type MetricsStore } from "../lib/metrics-store";
 
 function isMetricsLoading(includeSubagents: boolean, hasUsableSnapshot: boolean) {
   return includeSubagents && !hasUsableSnapshot;

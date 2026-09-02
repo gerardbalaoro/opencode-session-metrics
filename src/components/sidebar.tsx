@@ -1,14 +1,13 @@
 /** @jsxImportSource @opentui/solid */
 import { createMemo, Show, type Accessor } from "solid-js";
 
-import type { Config } from "#config";
-import type { MetricsProviderApi } from "#lib/api";
-import type { ModelUsage } from "#lib/metrics";
-import type { MetricsStore } from "#lib/metrics-store";
-import type { Catalog } from "#lib/pricing";
+import type { Config } from "../config";
+import type { MetricsProviderApi } from "../lib/api";
+import type { ModelUsage } from "../lib/metrics";
+import type { MetricsStore } from "../lib/metrics-store";
+import type { Catalog } from "../lib/pricing";
 
-import { formatCost, formatNumber } from "#lib/utils";
-
+import { formatCost, formatNumber } from "../lib/utils";
 import { Collapsible, Loader } from "./common";
 import { MetricsProvider, useMetrics } from "./metrics-provider";
 import { ModelBreakdown, ModelList } from "./models";

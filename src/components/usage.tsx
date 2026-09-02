@@ -1,12 +1,11 @@
 /** @jsxImportSource @opentui/solid */
 import { createMemo, Show } from "solid-js";
 
-import type { Metrics } from "#lib/metrics";
+import type { Metrics } from "../lib/metrics";
 
-import { ConfigContextSchema, type Config } from "#config";
-import { isContextCountWarning, isContextWarning, type ContextUsage } from "#lib/context";
-import { formatCost, formatNumber } from "#lib/utils";
-
+import { ConfigContextSchema, type Config } from "../config";
+import { isContextCountWarning, isContextWarning, type ContextUsage } from "../lib/context";
+import { formatCost, formatNumber } from "../lib/utils";
 import { type Reactive } from "./common";
 import { createNonZeroMetric, MetricList } from "./metrics";
 import { useTheme } from "./theme-provider";
