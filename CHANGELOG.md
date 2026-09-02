@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.3.1...v0.4.0) (2026-09-02)
+
+
+### Features
+
+* **metrics:** add provider metrics and fallback loading ([2f39603](https://github.com/gerardbalaoro/opencode-session-metrics/commit/2f3960324bed7f873dffb40892711a4dbf198cce))
+* **refresh:** add event-driven metrics refresh ([7d10979](https://github.com/gerardbalaoro/opencode-session-metrics/commit/7d1097995a1452d2c5ebadd1e15ef989880f7fa5))
+* **ui:** add metrics command and model breakdown views ([b931a2d](https://github.com/gerardbalaoro/opencode-session-metrics/commit/b931a2d32af1ce9550a533b0d07e0466d7700006))
+
+
+### Bug Fixes
+
+* **deps:** align development dependency versions ([b072ab8](https://github.com/gerardbalaoro/opencode-session-metrics/commit/b072ab8e23bebb4190f51669a3cdfaf76754f5ae))
+
 ## [0.3.1](https://github.com/gerardbalaoro/opencode-session-metrics/compare/v0.3.0...v0.3.1) (2026-08-04)
 
 ### Bug Fixes
